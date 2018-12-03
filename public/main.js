@@ -1505,7 +1505,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _angular_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @angular/core */ "./node_modules/@angular/core/fesm5/core.js");
 /* harmony import */ var _angular_router__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @angular/router */ "./node_modules/@angular/router/fesm5/router.js");
 /* harmony import */ var _projectprofile_projectprofile_service__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../projectprofile/projectprofile.service */ "./src/app/projectprofile/projectprofile.service.ts");
-/* harmony import */ var rxjs_operators__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! rxjs/operators */ "./node_modules/rxjs/_esm5/operators/index.js");
+/* harmony import */ var _services_auth_service__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../_services/auth.service */ "./src/app/_services/auth.service.ts");
+/* harmony import */ var rxjs_operators__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! rxjs/operators */ "./node_modules/rxjs/_esm5/operators/index.js");
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -1530,14 +1531,18 @@ var __metadata = (undefined && undefined.__metadata) || function (k, v) {
 
 
 
+
 var HomeComponent = /** @class */ (function () {
-    function HomeComponent(router, projectService) {
+    function HomeComponent(router, projectService, authService) {
         this.router = router;
         this.projectService = projectService;
+        this.authService = authService;
+        this.currentUser = this.authService.getAuthUser();
     }
     HomeComponent.prototype.ngOnInit = function () {
-        this.projects = this.projectService.getProjectsList().snapshotChanges().pipe(Object(rxjs_operators__WEBPACK_IMPORTED_MODULE_3__["map"])(function (changes) {
-            return changes.map(function (c) { return (__assign({ key: c.payload.key }, c.payload.val())); });
+        var _this = this;
+        this.projects = this.projectService.getProjectsList().snapshotChanges().pipe(Object(rxjs_operators__WEBPACK_IMPORTED_MODULE_4__["map"])(function (changes) {
+            return changes.map(function (c) { return (__assign({ key: c.payload.key }, c.payload.val())); }).filter(function (proj) { return proj.created_by == _this.currentUser.uid; });
         }));
     };
     HomeComponent.prototype.gotourl = function (url) {
@@ -1550,7 +1555,8 @@ var HomeComponent = /** @class */ (function () {
             styles: [__webpack_require__(/*! ./home.component.scss */ "./src/app/home/home.component.scss")]
         }),
         __metadata("design:paramtypes", [_angular_router__WEBPACK_IMPORTED_MODULE_1__["Router"],
-            _projectprofile_projectprofile_service__WEBPACK_IMPORTED_MODULE_2__["ProjectprofileService"]])
+            _projectprofile_projectprofile_service__WEBPACK_IMPORTED_MODULE_2__["ProjectprofileService"],
+            _services_auth_service__WEBPACK_IMPORTED_MODULE_3__["AuthService"]])
     ], HomeComponent);
     return HomeComponent;
 }());
@@ -3180,6 +3186,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _services_database_service__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../_services/database.service */ "./src/app/_services/database.service.ts");
 /* harmony import */ var _angular_material__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @angular/material */ "./node_modules/@angular/material/esm5/material.es5.js");
 /* harmony import */ var _services_evented__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../_services/evented */ "./src/app/_services/evented.ts");
+/* harmony import */ var _services_auth_service__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../_services/auth.service */ "./src/app/_services/auth.service.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -3201,14 +3208,16 @@ var __param = (undefined && undefined.__param) || function (paramIndex, decorato
 
 
 
+
 var ProjectprofileComponent = /** @class */ (function () {
-    function ProjectprofileComponent(activedRoute, router, location, databaseService, projectprofileService, dropdownService, dialog) {
+    function ProjectprofileComponent(activedRoute, router, location, databaseService, projectprofileService, dropdownService, authService, dialog) {
         this.activedRoute = activedRoute;
         this.router = router;
         this.location = location;
         this.databaseService = databaseService;
         this.projectprofileService = projectprofileService;
         this.dropdownService = dropdownService;
+        this.authService = authService;
         this.dialog = dialog;
         this.projectKey = null;
         // Create new project profile object
@@ -3233,9 +3242,12 @@ var ProjectprofileComponent = /** @class */ (function () {
                 _this.project = data;
             });
         }
+        else {
+            this.project = new _projectprofile__WEBPACK_IMPORTED_MODULE_4__["ProjectProfile"]();
+            this.project.created_by = this.authService.getAuthUser().uid;
+        }
         _services_evented__WEBPACK_IMPORTED_MODULE_8__["Evented"].on('updateProjectImage', function (e) {
             _this.project.thumb_image = e.args.imgUrl;
-            console.log(e.args.imgUrl);
             _this.saveProject();
         });
     };
@@ -3312,6 +3324,7 @@ var ProjectprofileComponent = /** @class */ (function () {
             _services_database_service__WEBPACK_IMPORTED_MODULE_6__["DatabaseService"],
             _projectprofile_service__WEBPACK_IMPORTED_MODULE_3__["ProjectprofileService"],
             _services_dropdown_service__WEBPACK_IMPORTED_MODULE_5__["DropdownService"],
+            _services_auth_service__WEBPACK_IMPORTED_MODULE_9__["AuthService"],
             _angular_material__WEBPACK_IMPORTED_MODULE_7__["MatDialog"]])
     ], ProjectprofileComponent);
     return ProjectprofileComponent;
