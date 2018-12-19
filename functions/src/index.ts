@@ -30,6 +30,33 @@ export const sendNotification = functions.https.onRequest((request, response) =>
             response.send({error: 'empty project'});
         }
 
+        db.ref('/projects')
+            .child(body.project)
+            .once('value')
+            .then(snap => {
+                var project = snap.val();
+                var notification = {
+                    created: new Date().getTime(),
+                    isread: false,
+                    key: "",
+                    message: body.message,
+                    sender: body.sender,
+                    type: body.type
+                }
+                
+                    var insertedKey = db.ref('/notifications/' + project.created_by).push(notification);
+                    db.ref('/notifications/' + project.created_by + '/' + insertedKey.key).update({key: insertedKey.key});
+                   db.ref('/users' )
+                        .child(project.created_by)
+                        .once('value')
+                        .then(tempuser => {
+                            var user_project = tempuser.val();
+                            sendWelcomeEmail(user_project.email, body.type, "You have got notification from BIM.");
+                        });
+                    
+                
+            });
+
         db.ref('/teams')
             .child(body.project)
             .once('value')
@@ -50,10 +77,9 @@ export const sendNotification = functions.https.onRequest((request, response) =>
                 }
                 if (members[key].userid) {
                     var insertedKey = db.ref('/notifications/' + members[key].userid).push(notification);
+                    db.ref('/notifications/' + members[key].userid + '/' + insertedKey.key).update({key: insertedKey.key});
+                    sendWelcomeEmail(members[key].email, body.type, "You have got notification from BIM.");
                 }
-                
-                db.ref('/notifications/' + members[key].userid + '/' + insertedKey.key).update({key: insertedKey.key});
-                sendWelcomeEmail(members[key].email, body.type, "You have got notification from BIM.");
             });
             
             })
@@ -200,6 +226,14 @@ export const loadTemplate = functions.https.onRequest((request, response) => {
             return;
         }
 
+        if(!body.projectid) {
+            response.send({
+                success: false,
+                msg: "Empty Project"
+            });
+            return;
+        }
+
        loadTemplateProc(request, response);
     });
 })
@@ -226,11 +260,12 @@ async function saveTemplateProc(request, response) {
         bims: null,
         lods: null,
         project_configuration: null,
-        teams: null,
+        // teams: null,
         meeting: null,
         matrix: null,
         quality: null,
-        key: null
+        key: null,
+        created_at: null
     };
     var project = await getProject(projectid);
     saveData.project = project;
@@ -264,8 +299,8 @@ async function saveTemplateProc(request, response) {
     var project_configuration = await getDBref('/project_configuration/' + projectid);
     saveData.project_configuration = project_configuration;
 
-    var teams = await getDBref('/teams/' + projectid);
-    saveData.teams = teams;
+    // var teams = await getDBref('/teams/' + projectid);
+    // saveData.teams = teams;
 
     var meeting = await getDBref('/meeting/' + projectid);
     saveData.meeting = meeting;
@@ -276,6 +311,7 @@ async function saveTemplateProc(request, response) {
     var quality = await getDBref('/quality/' + projectid);
     saveData.quality = quality;
     
+    saveData.created_at = new Date().getTime()
     var insertedKey = db.ref('/savedtemplates/' + userid).push(saveData);
     
     db.ref('/savedtemplates/' + userid + '/' + insertedKey.key).update({key: insertedKey.key});
@@ -291,21 +327,27 @@ async function loadTemplateProc(request, response) {
    var body = request.body;
    var userid = body.userid;
    var templateid = body.templateid;
+   var defaultRef = '/savedtemplates/Wjq8J7YzgpRwXiqBp7FBeJKrgmU2/-LTfRkcaycWM1yyVRoxX';
+   var template;
 
-   var template = await getDBref('/savedtemplates/' + userid + '/' + templateid);
-   
+   if(body.templateid == 'default') {
+    template = await getDBref(defaultRef);
+   } else{
+    template = await getDBref('/savedtemplates/' + userid + '/' + templateid);
+   }
+
    if (!template) {
       response.send({
         success: false,
-        msg: "Template user"
+        msg: "Template error"
       });
       return;
    }
    
-   var project = template['project'];
-   project['created_by'] = userid;
-   var insertedProject = db.ref('/projects').push(project);
-   var insertedprojectkey = insertedProject.key;
+//    var project = template['project'];
+//    project['created_by'] = userid;
+//    var insertedProject = db.ref('/projects').push(project);
+   var insertedprojectkey = body.projectid;
    if(template['stages']) {
        db.ref('/stages/' + insertedprojectkey).set(template['stages']);
    }
@@ -322,9 +364,9 @@ async function loadTemplateProc(request, response) {
     db.ref('/project_configuration/' + insertedprojectkey).set(template['project_configuration']);
    }
 
-   if(template['teams']) {
-    db.ref('/teams/' + insertedprojectkey).set(template['teams']);
-   }
+//    if(template['teams']) {
+//     db.ref('/teams/' + insertedprojectkey).set(template['teams']);
+//    }
 
    if(template['meeting']) {
     db.ref('/meeting/' + insertedprojectkey).set(template['meeting']);
